@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Índice de ABMs - Sistema Médico (Bootstrap)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <style>
+        body { background-color: #f8f9fa; }
+        .header-section { 
+            background-color: #007bff; 
+            color: white; 
+            padding: 30px 0; 
+            margin-bottom: 30px; 
+            border-radius: 0 0 10px 10px; 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header-section h1 { 
+            font-weight: 300; 
+            font-size: 2.5rem;
+        }
+        .module-list a { 
+            transition: background-color 0.2s; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+        }
+        .method-tag {
+            font-size: 0.75rem;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 5px;
+            margin-left: 10px;
+        }
+        .method-tag.GET { background-color: #0d6efd; color: white; }
+        .method-tag.POST { background-color: #198754; color: white; }
+        .method-tag.MIX { background-color: #ffc107; color: #343a40; }
+        .accordion-button {
+            font-weight: 500;
+            color: #343a40 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-section">
+        <div class="container">
+            <h1 class="text-center"><i class="fas fa-notes-medical me-2"></i> Índice de ABMs del Sistema Médico</h1>
+            <p class="lead text-center">API Backend (FastAPI en Puerto **8000**) y Frontend Separado (Ejecutándose aquí).</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="alert alert-info shadow-sm" role="alert">
+            <i class="fas fa-info-circle me-2"></i> **Instrucción:** Haz clic en los módulos para expandir las rutas base de tu API. Todos los enlaces abren la respuesta **JSON** de FastAPI en una nueva pestaña.
+        </div>
+
+        <div class="accordion shadow" id="abmAccordion">
+            
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                        <i class="fas fa-user-injured me-2 text-primary"></i> Módulo Pacientes
+                    </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#abmAccordion">
+                    <div class="list-group list-group-flush module-list">
+                        <a href="http://127.0.0.1:8000/patients/" target="_blank" class="list-group-item list-group-item-action">
+                            <span><i class="fas fa-plus-circle me-2"></i> Crear / Listar Pacientes (ABM Base)</span>
+                            <span class="d-flex align-items-center">
+                                <span class="method-tag MIX">GET/POST/PUT/DELETE</span>
+                                <span class="badge bg-secondary ms-2">/patients/</span>
+                            </span>
+                        </a>
+                        <a href="http://127.0.0.1:8000/medicalrecords/" target="_blank" class="list-group-item list-group-item-action">
+                            <span><i class="fas fa-book-medical me-2"></i> Historiales Médicos (Listado General)</span>
+                            <span class="d-flex align-items-center">
+                                <span class="method-tag GET">GET</span>
+                                <span class="badge bg-secondary ms-2">/medicalrecords/</span>
+                            </span>
+                        </a>
+                        <a href="http://127.0.0.1:8000/prescriptions/" target="_blank" class="list-group-item list-group-item-action">
+                            <span><i class="fas fa-prescription-bottle-alt me-2"></i> Recetas (Listado General)</span>
+                            <span class="d-flex align-items-center">
+                                <span class="method-tag GET">GET</span>
+                                <span class="badge bg-secondary ms-2">/prescriptions/</span>
+                            </span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingTwo">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                        <i class="fas fa-user-md me-2 text-success"></i> Módulo Médicos
+                    </button>
+                </h2>
+                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#abmAccordion">
+                    <div class="list-group list-group-flush module-list">
+                        <a href="http://127.0.0.1:8000/doctors/" target="_blank" class="list-group-item list-group-item-action">
+                            <span><i class="fas fa-plus-circle me-2"></i> Crear / Listar Médicos (ABM Base)</span>
+                            <span class="d-flex align-items-center">
+                                <span class="method-tag MIX">GET/POST/PUT/DELETE</span>
+                                <span class="badge bg-secondary ms-2">/doctors/</span>
+                            </span>
+                        </a>
+                        <a href="http://127.0.0.1:8000/workinghours/" target="_blank" class="list-group-item list-group-item-action">
+                            <span><i class="fas fa-clock me-2"></i> Horarios Laborales (Base)</span>
+                            <span class="d-flex align-items-center">
+                                <span class="method-tag GET">GET/POST</span>
+                                <span class="badge bg-secondary ms-2">/workinghours/</span>
+                            </span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingThree">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                        <i class="fas fa-calendar-check me-2 text-warning"></i> Módulo Turnos Médicos
+                    </button>
+                </h2>
+                <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#abmAccordion">
+                    <div class="list-group list-group-flush module-list">
+                        <a href="http://127.0.0.1:8000/appointments/" target="_blank" class="list-group-item list-group-item-action">
+                            <span><i class="fas fa-link me-2"></i> ABM Completo (Listado Base)</span>
+                            <span class="d-flex align-items-center">
+                                <span class="method-tag MIX">GET/POST/PUT/DELETE</span>
+                                <span class="badge bg-secondary ms-2">/appointments/</span>
+                            </span>
+                        </a>
+                        <a href="http://127.0.0.1:8000/reminders/" target="_blank" class="list-group-item list-group-item-action">
+                            <span><i class="fas fa-bell me-2"></i> Recordatorios (Base)</span>
+                            <span class="d-flex align-items-center">
+                                <span class="method-tag GET">GET/POST</span>
+                                <span class="badge bg-secondary ms-2">/reminders/</span>
+                            </span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingFour">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                        <i class="fas fa-star me-2 text-info"></i> Módulo Especialidades
+                    </button>
+                </h2>
+                <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#abmAccordion">
+                    <div class="list-group list-group-flush module-list">
+                        <a href="http://127.0.0.1:8000/specialties/" target="_blank" class="list-group-item list-group-item-action">
+                            <span><i class="fas fa-link me-2"></i> ABM Completo (Listado Base)</span>
+                            <span class="d-flex align-items-center">
+                                <span class="method-tag MIX">GET/POST/PUT/DELETE</span>
+                                <span class="badge bg-secondary ms-2">/specialties/</span>
+                            </span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingFive">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                        <i class="fas fa-chart-bar me-2 text-danger"></i> Módulo Reportes
+                    </button>
+                </h2>
+                <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive" data-bs-parent="#abmAccordion">
+                    <div class="list-group list-group-flush module-list">
+                        <a href="http://127.0.0.1:8000/reports/appointments-by-doctor" target="_blank" class="list-group-item list-group-item-action">
+                            <span><i class="fas fa-file-alt me-2"></i> Reporte: Turnos por Médico</span>
+                            <span class="d-flex align-items-center">
+                                <span class="method-tag GET">GET</span>
+                                <span class="badge bg-secondary ms-2">/reports/appointments-by-doctor</span>
+                            </span>
+                        </a>
+                        <a href="http://127.0.0.1:8000/reports/patient-attendance" target="_blank" class="list-group-item list-group-item-action">
+                            <span><i class="fas fa-chart-pie me-2"></i> Reporte: Asistencia de Pacientes</span>
+                            <span class="d-flex align-items-center">
+                                <span class="method-tag GET">GET</span>
+                                <span class="badge bg-secondary ms-2">/reports/patient-attendance</span>
+                            </span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        <div class="text-center mt-5 mb-5">
+            <a href="http://127.0.0.1:8000/docs" target="_blank" class="btn btn-lg btn-success shadow-lg">
+                <i class="fas fa-book me-2"></i> Ir a la Documentación de la API (Swagger UI)
+            </a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+</body>
+</html>
