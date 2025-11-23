@@ -1,14 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
-from enum import Enum
-
-class AppointmentStatus(str, Enum):
-    SCHEDULED = "SCHEDULED"
-    CONFIRMED = "CONFIRMED" 
-    CANCELLED = "CANCELLED"
-    COMPLETED = "COMPLETED"
-    NO_SHOW = "NO_SHOW"
+from app.models.AppointmentStatus import AppointmentStatus
 
 class AppointmentBase(BaseModel):
     patient_id: int
@@ -29,6 +22,6 @@ class Appointment(AppointmentBase):
     attended: bool
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True

@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.models.AppointmentStatus import Appointment, AppointmentStatus as ModelAppointmentStatus
+from app.models.Appointment import Appointment, AppointmentStatus as ModelAppointmentStatus
 from app.schemas.appointment import AppointmentCreate, AppointmentStatus as SchemaAppointmentStatus
 
 

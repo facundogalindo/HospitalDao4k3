@@ -5,7 +5,6 @@ from app.database import get_db
 from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel
-from app.models.AppointmentStatus import Appointment
 from app.models.Doctor import Doctor
 from app.models.Specialty import Specialty
 from app.models.DoctorSpecialty import DoctorSpecialty
@@ -13,7 +12,7 @@ from app.models.Patient import Patient
 import plotly.graph_objects as go
 import base64
 from io import BytesIO
-
+from app.models.Appointment import Appointment, AppointmentStatus
 router = APIRouter()
 
 
@@ -28,8 +27,8 @@ class AppointmentByDoctorResponse(BaseModel):
 @router.get("/appointments-by-doctor", response_model=List[AppointmentByDoctorResponse])
 def get_appointments_by_doctor(
     doctor_id: Optional[int] = None,
-    start_date: Optional[str] = None,  
-    end_date: Optional[str] = None,    
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     # Construir query base
@@ -38,39 +37,41 @@ def get_appointments_by_doctor(
         func.concat(Doctor.first_name, ' ', Doctor.last_name).label('doctor_name'),
         func.count(Appointment.id).label('appointment_count')
     ).join(Appointment, Doctor.id == Appointment.doctor_id)
-    
+
     # Aplicar filtros
     if doctor_id:
         query = query.filter(Doctor.id == doctor_id)
-    
+
     if start_date:
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
         query = query.filter(Appointment.start_at >= start_dt)
-    
+
     if end_date:
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         query = query.filter(Appointment.start_at <= end_dt)
-    
+
     # Agrupar por médico
     results = query.group_by(Doctor.id, Doctor.first_name, Doctor.last_name).all()
-    
+
     # Construir respuesta
     response = []
     for doctor_id, doctor_name, appointment_count in results:
         # Obtener detalles de los turnos
         appointments_query = db.query(Appointment).filter(Appointment.doctor_id == doctor_id)
-        
+
         if start_date:
             appointments_query = appointments_query.filter(Appointment.start_at >= start_dt)
         if end_date:
             appointments_query = appointments_query.filter(Appointment.start_at <= end_dt)
-            
+
         appointments = appointments_query.all()
-        
+
         appointment_details = [
             {
                 "id": app.id,
                 "patient_id": app.patient_id,
+                "patient_name": f"{app.patient.first_name} {app.patient.last_name}"
+                if app.patient else "Desconocido",
                 "start_at": app.start_at.isoformat(),
                 "end_at": app.end_at.isoformat(),
                 "status": app.status.value if app.status else None,
@@ -78,14 +79,14 @@ def get_appointments_by_doctor(
             }
             for app in appointments
         ]
-        
+
         response.append(AppointmentByDoctorResponse(
             doctor_id=doctor_id,
             doctor_name=doctor_name,
             appointment_count=appointment_count,
             appointments=appointment_details
         ))
-    
+
     return response
 
 
@@ -112,19 +113,19 @@ def get_appointments_by_specialty(
      .join(DoctorSpecialty, Specialty.id == DoctorSpecialty.specialty_id)\
      .join(Doctor, DoctorSpecialty.doctor_id == Doctor.id)\
      .join(Appointment, Doctor.id == Appointment.doctor_id)
-    
+
     # Aplicar filtros de fecha
     if start_date:
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
         query = query.filter(Appointment.start_at >= start_dt)
-    
+
     if end_date:
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         query = query.filter(Appointment.start_at <= end_dt)
-    
+
     # Agrupar por especialidad
     results = query.group_by(Specialty.id, Specialty.name).all()
-    
+
     return [
         AppointmentsBySpecialtyResponse(
             specialty_id=specialty_id,
@@ -162,9 +163,9 @@ def get_patients_by_date_range(
          Appointment.attended == True  # Solo pacientes que sí atendieron
      )\
      .group_by(Patient.id, Patient.first_name, Patient.last_name)
-    
+
     results = query.all()
-    
+
     return [
         PatientsByDateRangeResponse(
             patient_id=patient_id,
@@ -185,46 +186,66 @@ class AttendanceChartResponse(BaseModel):
 @router.get("/attendance-chart", response_model=AttendanceChartResponse)
 def get_attendance_chart(
     start_date: Optional[str] = None,
-    end_date: Optional[str] = None, 
+    end_date: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     # Query base
     query = db.query(Appointment)
-    
-    # Aplicar filtros de fecha
+
+    # Filtros de fecha
     if start_date:
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
         query = query.filter(Appointment.start_at >= start_dt)
-    
+
     if end_date:
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         query = query.filter(Appointment.start_at <= end_dt)
-    
+
     appointments = query.all()
-    
-    # Calcular estadísticas
+
+    # Estadísticas correctamente calculadas
     attended = sum(1 for app in appointments if app.attended)
-    not_attended = sum(1 for app in appointments if not app.attended and app.status != 'CANCELLED')
-    cancelled = sum(1 for app in appointments if app.status == 'CANCELLED')
+
+    cancelled = sum(
+        1 for app in appointments
+        if app.status == AppointmentStatus.CANCELLED
+    )
+
+    not_attended = sum(
+        1 for app in appointments
+        if not app.attended and app.status != AppointmentStatus.CANCELLED
+    )
+
     total = len(appointments)
-    
-    # Crear gráfico con Plotly
-    labels = ['Asistieron', 'No Asistieron', 'Cancelados']
+
+    # Asegurar que los valores nunca sean cero (Plotly mejora esto)
     values = [attended, not_attended, cancelled]
-    colors = ['#2ecc71', '#e74c3c', '#f39c12']  # verde, rojo, naranja
-    
-    fig = go.Figure(data=[go.Pie(labels=labels, values=values, marker=dict(colors=colors))])
-    
+    labels = ["Asistieron", "No asistieron", "Cancelados"]
+    colors = ["#2ecc71", "#e74c3c", "#f39c12"]
+
+    # Crear gráfico
+    fig = go.Figure(
+        data=[go.Pie(
+            labels=labels,
+            values=values,
+            marker=dict(colors=colors),
+            textinfo='label+percent',
+            insidetextorientation='radial'
+        )]
+    )
+
     fig.update_layout(
         title='Estadísticas de Asistencia de Pacientes',
-        showlegend=True
+        showlegend=True,
+        height=600,
+        width=900
     )
-    
-    # Convertir gráfico a imagen base64
+
+    # Convertir a imagen
     img_buffer = BytesIO()
     fig.write_image(img_buffer, format="png")
     img_buffer.seek(0)
-    
-    img_base64 = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
-    
+
+    img_base64 = base64.b64encode(img_buffer.getvalue()).decode("utf-8")
+
     return AttendanceChartResponse(chart_image=f"data:image/png;base64,{img_base64}")

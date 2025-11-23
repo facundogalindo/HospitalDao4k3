@@ -25,7 +25,7 @@ app.add_middleware(
 scheduler = BackgroundScheduler()
 
 def generate_automatic_reminders():
-    from app.models.AppointmentStatus import Appointment
+    from app.models.Appointment import Appointment, AppointmentStatus
     from app.models.Reminder import Reminder
     db = SessionLocal()
     try:
@@ -64,7 +64,7 @@ def generate_automatic_reminders():
 def send_pending_reminders():
     from app.utils.email_sender import send_email
     from app.models.Reminder import Reminder
-    from app.models.AppointmentStatus import Appointment
+    from app.models.Appointment import Appointment, AppointmentStatus
     from app.models.Patient import Patient
 
     db = SessionLocal()

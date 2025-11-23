@@ -25,6 +25,7 @@ export default function Reportes() {
 
   const [reportData, setReportData] = useState([]);
   const [attendanceData, setAttendanceData] = useState(null);
+  const [reportType, setReportType] = useState(""); // "doctor", "specialty", "attendance"
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -39,8 +40,8 @@ export default function Reportes() {
   const loadInitial = async () => {
     try {
       const [docs, specs] = await Promise.all([getDoctors(), getSpecialties()]);
-      setDoctors(docs.data);
-      setSpecialties(specs.data);
+      setDoctors(docs.data || docs);
+      setSpecialties(specs.data || specs);
     } catch (err) {
       console.error(err);
       setError("Error al cargar médicos o especialidades.");
@@ -48,23 +49,26 @@ export default function Reportes() {
   };
 
   // -------------------------------------
-  // FUNCIONES REPORTES
+  // FUNCIONES REPORTES - MODIFICADAS
   // -------------------------------------
   const buscarTurnosPorDoctor = async () => {
-    if (!doctorId || !fromDate || !toDate) {
-      alert("Seleccione médico y rango de fechas.");
+    if (!doctorId) {
+      alert("Seleccione un médico.");
       return;
     }
 
     try {
       setLoading(true);
-      const res = await getAppointmentsByDoctor({
-        doctor_id: doctorId,
-        start_date: fromDate,
-        end_date: toDate,
-      });
-
-      setReportData(res.data);
+      setReportType("doctor");
+      const res = await getAppointmentsByDoctor(doctorId, fromDate, toDate);
+      
+      // La API devuelve un array de objetos con appointments dentro
+      if (res.data && res.data.length > 0) {
+        const doctorData = res.data[0]; // Tomamos el primer médico
+        setReportData(doctorData.appointments || []);
+      } else {
+        setReportData([]);
+      }
       setAttendanceData(null);
     } catch (err) {
       console.error(err);
@@ -75,20 +79,18 @@ export default function Reportes() {
   };
 
   const buscarTurnosPorEspecialidad = async () => {
-    if (!specialtyId || !fromDate || !toDate) {
-      alert("Seleccione especialidad y rango de fechas.");
+    if (!specialtyId) {
+      alert("Seleccione una especialidad.");
       return;
     }
 
     try {
       setLoading(true);
-      const res = await getAppointmentsBySpecialty({
-        specialty_id: specialtyId,
-        start_date: fromDate,
-        end_date: toDate,
-      });
-
-      setReportData(res.data);
+      setReportType("specialty");
+      const res = await getAppointmentsBySpecialty(fromDate, toDate);
+      
+      // La API devuelve array de especialidades con counts
+      setReportData(res.data || []);
       setAttendanceData(null);
     } catch (err) {
       console.error(err);
@@ -99,18 +101,12 @@ export default function Reportes() {
   };
 
   const buscarAsistencia = async () => {
-    if (!fromDate || !toDate) {
-      alert("Seleccione rango de fechas.");
-      return;
-    }
-
     try {
       setLoading(true);
-      const res = await getAttendanceStats({
-        start_date: fromDate,
-        end_date: toDate,
-      });
-
+      setReportType("attendance");
+      const res = await getAttendanceStats(fromDate, toDate);
+      
+      // La API devuelve { chart_image } con la imagen base64
       setAttendanceData(res.data);
       setReportData([]);
     } catch (err) {
@@ -122,7 +118,7 @@ export default function Reportes() {
   };
 
   // -------------------------------------
-  // RENDER
+  // RENDER - MODIFICADO
   // -------------------------------------
   return (
     <div className="crud-container">
@@ -137,7 +133,7 @@ export default function Reportes() {
         <h3><FaSearch /> Filtros</h3>
 
         <div className="row">
-          {/* DOCTOR */}
+          {/* DOCTOR - OBLIGATORIO SOLO PARA TURNOS POR MÉDICO */}
           <div className="col">
             <label>Médico:</label>
             <select className="form-control" value={doctorId} onChange={(e) => setDoctorId(e.target.value)}>
@@ -150,11 +146,11 @@ export default function Reportes() {
             </select>
           </div>
 
-          {/* ESPECIALIDAD */}
+          {/* ESPECIALIDAD - OPCIONAL */}
           <div className="col">
             <label>Especialidad:</label>
             <select className="form-control" value={specialtyId} onChange={(e) => setSpecialtyId(e.target.value)}>
-              <option value="">Seleccione especialidad</option>
+              <option value="">Todas las especialidades</option>
               {specialties.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -163,14 +159,14 @@ export default function Reportes() {
             </select>
           </div>
 
-          {/* FECHAS */}
+          {/* FECHAS - OPCIONALES */}
           <div className="col">
-            <label>Desde:</label>
+            <label>Desde (opcional):</label>
             <input type="date" className="form-control" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
           </div>
 
           <div className="col">
-            <label>Hasta:</label>
+            <label>Hasta (opcional):</label>
             <input type="date" className="form-control" value={toDate} onChange={(e) => setToDate(e.target.value)} />
           </div>
         </div>
@@ -198,46 +194,69 @@ export default function Reportes() {
         {loading ? (
           <p>Cargando reporte...</p>
         ) : attendanceData ? (
-          // ------------------------------------
           // REPORTE ASISTENCIA
-          // ------------------------------------
           <div className="asistencia-box">
             <h2>📊 Estadísticas de Asistencia</h2>
-            <p><strong>Asistidos:</strong> {attendanceData.attended}</p>
-            <p><strong>No asistieron:</strong> {attendanceData.not_attended}</p>
-            <p><strong>Total:</strong> {attendanceData.total}</p>
+            {attendanceData.chart_image && (
+              <img 
+                src={attendanceData.chart_image} 
+                alt="Estadísticas de asistencia" 
+                style={{ maxWidth: '600px', height: 'auto', border: '1px solid #ddd' }}
+              />
+            )}
           </div>
-        ) : reportData && reportData.length > 0 ? (
-          // ------------------------------------
-          // TABLA TURNOS POR DOCTOR/ESPECIALIDAD
-          // ------------------------------------
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>ID Turno</th>
-                <th>Paciente</th>
-                <th>Médico</th>
-                <th>Especialidad</th>
-                <th>Fecha</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {reportData.map((t) => (
-                <tr key={t.id}>
-                  <td>{t.id}</td>
-                  <td>{t.patient_name}</td>
-                  <td>{t.doctor_name}</td>
-                  <td>{t.specialty_name}</td>
-                  <td>{t.start_at?.split("T")[0]}</td>
-                  <td>{t.status}</td>
+        ) : reportType === "doctor" && reportData.length > 0 ? (
+          // TABLA TURNOS POR DOCTOR
+          <div>
+            <h3>📋 Turnos por Médico</h3>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>ID Turno</th>
+                  <th>Paciente</th>
+                  <th>Fecha Inicio</th>
+                  <th>Fecha Fin</th>
+                  <th>Estado</th>
+                  <th>Asistió</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {reportData.map((t) => (
+                  <tr key={t.id}>
+                    <td>{t.id}</td>
+                    <td>{t.patient_name}</td>
+                    <td>{new Date(t.start_at).toLocaleString()}</td>
+                    <td>{new Date(t.end_at).toLocaleString()}</td>
+                    <td>{t.status}</td>
+                    <td>{t.attended ? 'Sí' : 'No'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : reportType === "specialty" && reportData.length > 0 ? (
+          // TABLA TURNOS POR ESPECIALIDAD
+          <div>
+            <h3>🏥 Turnos por Especialidad</h3>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Especialidad</th>
+                  <th>Cantidad de Turnos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportData.map((item) => (
+                  <tr key={item.specialty_id}>
+                    <td>{item.specialty_name}</td>
+                    <td>{item.appointment_count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
-          <p>No hay resultados para mostrar.</p>
+          <p>No hay resultados para mostrar. Use los filtros arriba.</p>
         )}
       </div>
     </div>
