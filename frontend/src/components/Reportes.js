@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import jsPDF from "jspdf";
 import {
   getDoctors,
   getSpecialties,
@@ -197,13 +198,71 @@ export default function Reportes() {
           // REPORTE ASISTENCIA
           <div className="asistencia-box">
             <h2>📊 Estadísticas de Asistencia</h2>
-            {attendanceData.chart_image && (
-              <img 
-                src={attendanceData.chart_image} 
-                alt="Estadísticas de asistencia" 
-                style={{ maxWidth: '600px', height: 'auto', border: '1px solid #ddd' }}
-              />
-            )}
+{attendanceData.chart_image && (
+  <div style={{ textAlign: "center" }}>
+    {/* Mostrar imagen */}
+    <img
+      id="asistencia-img"
+      src={`${attendanceData.chart_image}?cacheBust=${Date.now()}`}
+      alt="Estadísticas de asistencia"
+      style={{
+        maxWidth: "600px",
+        height: "auto",
+        border: "1px solid #ddd",
+        marginBottom: "20px",
+      }}
+    />
+
+    {/* Botón descargar PNG */}
+    <button
+      onClick={() => {
+        const link = document.createElement("a");
+        link.href = attendanceData.chart_image;
+        link.download = "estadisticas_asistencia.png";
+        link.click();
+      }}
+      className="add-button"
+      style={{ marginRight: "10px" }}
+    >
+      📥 Descargar imagen PNG
+    </button>
+
+    {/* Botón descargar PDF */}
+    <button
+      onClick={() => {
+        const pdf = new jsPDF({
+          orientation: "portrait",
+          unit: "pt",
+          format: "a4",
+        });
+
+        pdf.setFontSize(20);
+        pdf.text("Estadísticas de Asistencia", 40, 40);
+
+        pdf.setFontSize(12);
+        pdf.text(`Generado: ${new Date().toLocaleString()}`, 40, 70);
+
+        // Agregar imagen al PDF (centrada, tamaño automático)
+        const imgWidth = 500;
+        const imgHeight = 500;
+
+        pdf.addImage(
+          attendanceData.chart_image,
+          "PNG",
+          50,
+          100,
+          imgWidth,
+          imgHeight
+        );
+
+        pdf.save("estadisticas_asistencia.pdf");
+      }}
+      className="add-button"
+    >
+      📄 Descargar PDF
+    </button>
+  </div>
+)}
           </div>
         ) : reportType === "doctor" && reportData.length > 0 ? (
           // TABLA TURNOS POR DOCTOR

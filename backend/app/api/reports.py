@@ -13,6 +13,7 @@ import plotly.graph_objects as go
 import base64
 from io import BytesIO
 from app.models.Appointment import Appointment, AppointmentStatus
+from matplotlib import pyplot as plt
 router = APIRouter()
 
 
@@ -189,10 +190,8 @@ def get_attendance_chart(
     end_date: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    # Query base
     query = db.query(Appointment)
 
-    # Filtros de fecha
     if start_date:
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
         query = query.filter(Appointment.start_at >= start_dt)
@@ -203,49 +202,47 @@ def get_attendance_chart(
 
     appointments = query.all()
 
-    # Estadísticas correctamente calculadas
+    # --- Contadores ---
     attended = sum(1 for app in appointments if app.attended)
-
-    cancelled = sum(
-        1 for app in appointments
-        if app.status == AppointmentStatus.CANCELLED
-    )
-
+    cancelled = sum(1 for app in appointments if app.status == AppointmentStatus.CANCELLED)
     not_attended = sum(
         1 for app in appointments
         if not app.attended and app.status != AppointmentStatus.CANCELLED
     )
 
-    total = len(appointments)
-
-    # Asegurar que los valores nunca sean cero (Plotly mejora esto)
-    values = [attended, not_attended, cancelled]
     labels = ["Asistieron", "No asistieron", "Cancelados"]
+    values = [attended, not_attended, cancelled]
     colors = ["#2ecc71", "#e74c3c", "#f39c12"]
 
-    # Crear gráfico
-    fig = go.Figure(
-        data=[go.Pie(
-            labels=labels,
-            values=values,
-            marker=dict(colors=colors),
-            textinfo='label+percent',
-            insidetextorientation='radial'
-        )]
+    # --- Gráfico de barras ---
+    plt.figure(figsize=(8, 5))
+    bars = plt.bar(labels, values, color=colors)
+
+    # Mostrar valores arriba de cada barra
+    for bar in bars:
+        y = bar.get_height()
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            y + 0.1,
+            f"{int(y)}",
+            ha="center",
+            va="bottom",
+            fontsize=12
+        )
+
+    plt.title("Estadísticas de Asistencia de Pacientes")
+    plt.xlabel("Categorías")
+    plt.ylabel("Cantidad de turnos")
+    plt.grid(axis='y', linestyle='--', alpha=0.4)
+
+    # Exportar imagen a base64
+    buffer = BytesIO()
+    plt.savefig(buffer, format="png", bbox_inches="tight")
+    buffer.seek(0)
+    img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+    plt.close()
+
+    return AttendanceChartResponse(
+        chart_image=f"data:image/png;base64,{img_base64}"
     )
-
-    fig.update_layout(
-        title='Estadísticas de Asistencia de Pacientes',
-        showlegend=True,
-        height=600,
-        width=900
-    )
-
-    # Convertir a imagen
-    img_buffer = BytesIO()
-    fig.write_image(img_buffer, format="png")
-    img_buffer.seek(0)
-
-    img_base64 = base64.b64encode(img_buffer.getvalue()).decode("utf-8")
-
-    return AttendanceChartResponse(chart_image=f"data:image/png;base64,{img_base64}")
