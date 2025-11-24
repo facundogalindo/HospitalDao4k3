@@ -144,6 +144,17 @@ export const getPatientsByDateRange = (startDate, endDate) =>
             end_date: endDate
         }
     });
+// --- REPORTE: Pacientes atendidos paginado
+export const getPatientsAttended = (startDate, endDate, page, pageSize) =>
+  api.get("/reports/patients-attended", {
+    params: {
+      start_date: startDate,
+      end_date: endDate,
+      page,
+      page_size: pageSize,
+    },
+  });
+
 
 
 

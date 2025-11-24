@@ -6,7 +6,14 @@ class Prescription(Base):
     __tablename__ = "prescriptions"
 
     id = Column(Integer, primary_key=True, index=True)
-    medical_record_id = Column(Integer, ForeignKey("medical_records.id", ondelete="CASCADE"), nullable=False)
+
+    # 🔥 AHORA OPCIONAL Y SIN CASCADE
+    medical_record_id = Column(
+        Integer,
+        ForeignKey("medical_records.id", ondelete="SET NULL"),
+        nullable=True
+    )
+
     medication = Column(String(255), nullable=False)
     dosage = Column(String(255))
     frequency = Column(String(255))

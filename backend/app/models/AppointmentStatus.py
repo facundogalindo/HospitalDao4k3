@@ -2,9 +2,9 @@ from sqlalchemy import Column, Integer, ForeignKey, TIMESTAMP, Boolean, Text, En
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
-import enum
+from enum import Enum
 
-class AppointmentStatus(enum.Enum):
+class AppointmentStatus(str, Enum):
     SCHEDULED = "SCHEDULED"
     CONFIRMED = "CONFIRMED"
     CANCELLED = "CANCELLED"

@@ -17,7 +17,7 @@ export default function Recetas() {
     const [prescriptions, setPrescriptions] = useState([]);
 
     const [selectedPatientId, setSelectedPatientId] = useState("");
-    const [selectedRecordId, setSelectedRecordId] = useState("");
+    const [selectedRecordId, setSelectedRecordId] = useState(null);  // 🔥 NUNCA VACÍO
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -31,13 +31,12 @@ export default function Recetas() {
     };
 
     const [formData, setFormData] = useState(emptyForm);
-
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // -----------------------------------
+    // ---------------------------------------------------------
     // CARGA INICIAL
-    // -----------------------------------
+    // ---------------------------------------------------------
     useEffect(() => {
         loadPatients();
     }, []);
@@ -48,8 +47,9 @@ export default function Recetas() {
             setPatients(res.data);
 
             if (res.data.length > 0) {
-                setSelectedPatientId(res.data[0].id);
-                loadRecords(res.data[0].id);
+                const firstId = res.data[0].id;
+                setSelectedPatientId(firstId);
+                loadRecords(firstId);
             }
         } catch {
             setError("Error cargando pacientes");
@@ -58,27 +58,46 @@ export default function Recetas() {
         }
     };
 
+    // ---------------------------------------------------------
+    // CARGAR HISTORIALES
+    // ---------------------------------------------------------
     const loadRecords = async (patientId) => {
         const res = await getMedicalRecordsByPatient(patientId);
         setRecords(res.data);
 
         if (res.data.length > 0) {
-            setSelectedRecordId(res.data[0].id);
-            loadPrescriptions(res.data[0].id);
+            const firstRecordId = res.data[0].id;
+            setSelectedRecordId(firstRecordId);
+            loadPrescriptions(firstRecordId);
         } else {
+            setSelectedRecordId(null);      // 🔥 FIX
             setPrescriptions([]);
-            setSelectedRecordId("");
         }
     };
 
+    // ---------------------------------------------------------
+    // CARGAR RECETAS
+    // ---------------------------------------------------------
     const loadPrescriptions = async (recordId) => {
-        const res = await getPrescriptionsByRecord(recordId);
-        setPrescriptions(res.data);
+        console.log("loadPrescriptions() → recordId =", recordId);
+
+        if (!recordId) {
+            setPrescriptions([]);
+            return;
+        }
+
+        try {
+            const res = await getPrescriptionsByRecord(recordId);
+            setPrescriptions(res.data);
+        } catch (error) {
+            console.error("Error al cargar recetas:", error);
+            setPrescriptions([]);
+        }
     };
 
-    // -----------------------------------
-    // CAMBIOS EN SELECTS
-    // -----------------------------------
+    // ---------------------------------------------------------
+    // CAMBIAR PACIENTE / HISTORIAL
+    // ---------------------------------------------------------
     const handlePatientChange = (e) => {
         const id = e.target.value;
         setSelectedPatientId(id);
@@ -86,19 +105,19 @@ export default function Recetas() {
     };
 
     const handleRecordChange = (e) => {
-        const id = e.target.value;
+        const id = e.target.value || null;    // 🔥 FIX
         setSelectedRecordId(id);
         loadPrescriptions(id);
     };
 
-    // -----------------------------------
-    // FORMULARIO
-    // -----------------------------------
+    // ---------------------------------------------------------
+    // FORMULARIO (CREAR / EDITAR)
+    // ---------------------------------------------------------
     const openCreate = () => {
         setIsEditing(false);
         setFormData({
             ...emptyForm,
-            medical_record_id: selectedRecordId
+            medical_record_id: ""         // 🔥 usuario selecciona historial en modal
         });
         setIsModalOpen(true);
     };
@@ -117,31 +136,28 @@ export default function Recetas() {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData({
-            ...formData,
-            [name]: value
-        });
+        setFormData({ ...formData, [name]: value });
     };
 
-    // -----------------------------------
-    // GUARDAR
-    // -----------------------------------
+    // ---------------------------------------------------------
+    // GUARDAR RECETA
+    // ---------------------------------------------------------
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const payload = {
-            ...formData,
-            medical_record_id: selectedRecordId
-        };
+        if (!formData.medical_record_id) {
+            setError("Debe seleccionar un historial médico.");
+            return;
+        }
 
         try {
             if (isEditing) {
-                await updatePrescription(formData.id, payload);
+                await updatePrescription(formData.id, formData);
             } else {
-                await createPrescription(payload);
+                await createPrescription(formData);
             }
 
-            loadPrescriptions(selectedRecordId);
+            loadPrescriptions(formData.medical_record_id);
             closeModal();
 
         } catch (err) {
@@ -149,18 +165,19 @@ export default function Recetas() {
         }
     };
 
-    // -----------------------------------
-    // ELIMINAR
-    // -----------------------------------
+    // ---------------------------------------------------------
+    // ELIMINAR RECETA
+    // ---------------------------------------------------------
     const handleDelete = async (id) => {
         if (!window.confirm("¿Eliminar esta receta?")) return;
+
         await deletePrescription(id);
         loadPrescriptions(selectedRecordId);
     };
 
-    // -----------------------------------
+    // ---------------------------------------------------------
     // RENDER
-    // -----------------------------------
+    // ---------------------------------------------------------
     if (loading) return <p>Cargando...</p>;
 
     return (
@@ -169,12 +186,13 @@ export default function Recetas() {
 
             {/* SELECT PACIENTE Y HISTORIAL */}
             <div className="row mb-3">
-
+                
                 <div className="col">
                     <label>Paciente:</label>
                     <select className="form-control"
                         value={selectedPatientId}
                         onChange={handlePatientChange}>
+
                         {patients.map(p => (
                             <option key={p.id} value={p.id}>
                                 {p.last_name}, {p.first_name}
@@ -186,10 +204,11 @@ export default function Recetas() {
                 <div className="col">
                     <label>Historial:</label>
                     <select className="form-control"
-                        value={selectedRecordId}
+                        value={selectedRecordId || ""}
                         onChange={handleRecordChange}>
+
                         {records.length === 0 ? (
-                            <option>No hay historiales</option>
+                            <option value="">No hay historiales</option>
                         ) : (
                             records.map(r => (
                                 <option key={r.id} value={r.id}>
@@ -220,16 +239,13 @@ export default function Recetas() {
 
                 <tbody>
                     {prescriptions.length === 0 ? (
-                        <tr>
-                            <td colSpan="4">No hay recetas registradas</td>
-                        </tr>
+                        <tr><td colSpan="4">No hay recetas registradas</td></tr>
                     ) : (
                         prescriptions.map(p => (
                             <tr key={p.id}>
                                 <td>{p.medication}</td>
                                 <td>{p.dosage}</td>
                                 <td>{p.frequency}</td>
-
                                 <td className="action-cells">
                                     <button className="action-button edit-button" onClick={() => openEdit(p)}>
                                         <FaEdit />
@@ -255,6 +271,23 @@ export default function Recetas() {
                         </div>
 
                         <form className="modal-form" onSubmit={handleSubmit}>
+
+                            <label>
+                                Historial Médico:
+                                <select
+                                    name="medical_record_id"
+                                    value={formData.medical_record_id || ""}
+                                    onChange={handleInputChange}
+                                    required
+                                >
+                                    <option value="">Seleccione un historial…</option>
+                                    {records.map(r => (
+                                        <option key={r.id} value={r.id}>
+                                            {r.record_date} - {r.summary.substring(0, 25)}...
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
 
                             <label>
                                 Medicamento:
@@ -304,7 +337,6 @@ export default function Recetas() {
                     </div>
                 </div>
             )}
-
         </div>
     );
 }

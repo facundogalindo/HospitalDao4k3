@@ -56,7 +56,11 @@ def generate_automatic_reminders():
 
             db.add(reminder)
 
-        db.commit()
+        try:
+            db.commit()
+        except Exception as e:
+            print("[SCHEDULER] ERROR evitando lock:", e)
+            db.rollback()
     finally:
         db.close()
 
@@ -99,11 +103,15 @@ def send_pending_reminders():
             send_email(patient.email, subject, message)
             r.sent = True
 
-        db.commit()
+        try:
+            db.commit()
+        except Exception as e:
+            print("[SCHEDULER] ERROR evitando lock:", e)
+            db.rollback()
     finally:
         db.close()
 
-
+"""
 @app.on_event("startup")
 def start_scheduler():
     scheduler.add_job(
@@ -128,7 +136,7 @@ def start_scheduler():
 def shutdown_scheduler():
     scheduler.shutdown()
     print("[SCHEDULER] Detenido.")
-
+"""
 
 # ---------------- IMPORT ROUTERS ----------------
 # ---------------- IMPORT ROUTERS ----------------
@@ -148,7 +156,7 @@ app.include_router(doctors_router)
 app.include_router(specialties_router)
 app.include_router(appointments_router, prefix="/appointments", tags=["appointments"])
 app.include_router(medicalrecords_router, prefix="/medical-records", tags=["medical-records"])
-app.include_router(prescriptions_router, prefix="/prescriptions", tags=["prescriptions"])
+app.include_router(prescriptions_router, tags=["prescriptions"])
 app.include_router(reminders_router, prefix="/reminders", tags=["reminders"])
 app.include_router(reports_router, prefix="/reports", tags=["reports"])
 

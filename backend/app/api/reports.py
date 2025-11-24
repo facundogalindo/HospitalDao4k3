@@ -9,15 +9,16 @@ from app.models.Doctor import Doctor
 from app.models.Specialty import Specialty
 from app.models.DoctorSpecialty import DoctorSpecialty
 from app.models.Patient import Patient
-import plotly.graph_objects as go
 import base64
 from io import BytesIO
 from app.models.Appointment import Appointment, AppointmentStatus
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
+
 router = APIRouter()
 
-
-#--- Listado de turnos por médico en un período
+# ---------------------------------------------------------
+#   🔵 Turnos por médico
+# ---------------------------------------------------------
 
 class AppointmentByDoctorResponse(BaseModel):
     doctor_id: int
@@ -32,14 +33,12 @@ def get_appointments_by_doctor(
     end_date: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    # Construir query base
     query = db.query(
-        Doctor.id.label('doctor_id'),
-        func.concat(Doctor.first_name, ' ', Doctor.last_name).label('doctor_name'),
-        func.count(Appointment.id).label('appointment_count')
+        Doctor.id.label("doctor_id"),
+        func.concat(Doctor.first_name, " ", Doctor.last_name).label("doctor_name"),
+        func.count(Appointment.id).label("appointment_count")
     ).join(Appointment, Doctor.id == Appointment.doctor_id)
 
-    # Aplicar filtros
     if doctor_id:
         query = query.filter(Doctor.id == doctor_id)
 
@@ -51,13 +50,10 @@ def get_appointments_by_doctor(
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         query = query.filter(Appointment.start_at <= end_dt)
 
-    # Agrupar por médico
-    results = query.group_by(Doctor.id, Doctor.first_name, Doctor.last_name).all()
+    results = query.group_by(Doctor.id).all()
 
-    # Construir respuesta
     response = []
     for doctor_id, doctor_name, appointment_count in results:
-        # Obtener detalles de los turnos
         appointments_query = db.query(Appointment).filter(Appointment.doctor_id == doctor_id)
 
         if start_date:
@@ -91,8 +87,9 @@ def get_appointments_by_doctor(
     return response
 
 
-
-#---antidad de turnos por especialidad
+# ---------------------------------------------------------
+#   🏥 Turnos por especialidad
+# ---------------------------------------------------------
 
 class AppointmentsBySpecialtyResponse(BaseModel):
     specialty_id: int
@@ -105,17 +102,15 @@ def get_appointments_by_specialty(
     end_date: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    # Query para contar turnos por especialidad
     query = db.query(
-        Specialty.id.label('specialty_id'),
-        Specialty.name.label('specialty_name'),
-        func.count(Appointment.id).label('appointment_count')
+        Specialty.id.label("specialty_id"),
+        Specialty.name.label("specialty_name"),
+        func.count(Appointment.id).label("appointment_count")
     ).select_from(Specialty)\
      .join(DoctorSpecialty, Specialty.id == DoctorSpecialty.specialty_id)\
      .join(Doctor, DoctorSpecialty.doctor_id == Doctor.id)\
      .join(Appointment, Doctor.id == Appointment.doctor_id)
 
-    # Aplicar filtros de fecha
     if start_date:
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
         query = query.filter(Appointment.start_at >= start_dt)
@@ -124,8 +119,7 @@ def get_appointments_by_specialty(
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         query = query.filter(Appointment.start_at <= end_dt)
 
-    # Agrupar por especialidad
-    results = query.group_by(Specialty.id, Specialty.name).all()
+    results = query.group_by(Specialty.id).all()
 
     return [
         AppointmentsBySpecialtyResponse(
@@ -137,52 +131,85 @@ def get_appointments_by_specialty(
     ]
 
 
+# ---------------------------------------------------------
+#   👥 Pacientes atendidos (PAGINADO)
+# ---------------------------------------------------------
 
-#---Pacientes atendidos en un rango de fechas
-class PatientsByDateRangeResponse(BaseModel):
-    patient_id: int
-    patient_name: str
-    appointment_count: int
-    last_appointment: Optional[str]
+class PatientsPaginatedResponse(BaseModel):
+    data: list
+    current_page: int
+    total_pages: int
 
-@router.get("/patients-by-date-range", response_model=List[PatientsByDateRangeResponse])
-def get_patients_by_date_range(
+@router.get("/patients-attended", response_model=PatientsPaginatedResponse)
+def get_patients_attended(
     start_date: str,
     end_date: str,
+    page: int = 1,
+    page_size: int = 10,
     db: Session = Depends(get_db)
 ):
-    # Query para pacientes atendidos en un rango de fechas
-    query = db.query(
-        Patient.id.label('patient_id'),
-        func.concat(Patient.first_name, ' ', Patient.last_name).label('patient_name'),
-        func.count(Appointment.id).label('appointment_count'),
-        func.max(Appointment.start_at).label('last_appointment')
-    ).join(Appointment, Patient.id == Appointment.patient_id)\
+    # --- Parseo seguro de fechas ---
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    # Para incluir TODO el día final
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+    end_dt = end_dt.replace(hour=23, minute=59, second=59)
+
+    # --- Query base (solo COMPLETED) ---
+    base_query = db.query(
+        Patient.id.label("patient_id"),
+
+        # Compatible con PostgreSQL
+        (Patient.first_name + " " + Patient.last_name).label("patient_name"),
+
+        func.count(Appointment.id).label("appointment_count"),
+        func.max(Appointment.start_at).label("last_appointment")
+    ).join(Appointment, Appointment.patient_id == Patient.id) \
      .filter(
-         Appointment.start_at >= datetime.strptime(start_date, "%Y-%m-%d"),
-         Appointment.start_at <= datetime.strptime(end_date, "%Y-%m-%d"),
-         Appointment.attended == True  # Solo pacientes que sí atendieron
-     )\
-     .group_by(Patient.id, Patient.first_name, Patient.last_name)
+         Appointment.status == "COMPLETED",
+         Appointment.start_at >= start_dt,
+         Appointment.start_at <= end_dt
+     ) \
+     .group_by(Patient.id)
 
-    results = query.all()
+    # -------- PAGINACIÓN REAL (PostgreSQL) --------
+    # NO usar .count() sobre el query con GROUP BY
+    total_records = db.query(func.count()).select_from(base_query.subquery()).scalar()
+    total_pages = (total_records + page_size - 1) // page_size
 
-    return [
-        PatientsByDateRangeResponse(
-            patient_id=patient_id,
-            patient_name=patient_name,
-            appointment_count=appointment_count,
-            last_appointment=last_appointment.isoformat() if last_appointment else None
-        )
-        for patient_id, patient_name, appointment_count, last_appointment in results
+    # -------- APLICAR OFFSET + LIMIT --------
+    results = (
+        base_query
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+
+    # -------- FORMATEO ESTÁNDAR --------
+    data = [
+        {
+            "patient_id": r.patient_id,
+            "patient_name": r.patient_name,
+            "appointment_count": r.appointment_count,
+            "last_appointment": r.last_appointment.isoformat() if r.last_appointment else None
+        }
+        for r in results
     ]
 
+    return PatientsPaginatedResponse(
+        data=data,
+        current_page=page,
+        total_pages=total_pages
+    )
 
 
 
-#--- Gráfico estadístico: asistencia vs. inasistencias (CON GRÁFICO)
+
+# ---------------------------------------------------------
+#   📊 Asistencia (gráfico de barras)
+# ---------------------------------------------------------
+
 class AttendanceChartResponse(BaseModel):
-    chart_image: str  # Imagen base64 del gráfico
+    chart_image: str
 
 @router.get("/attendance-chart", response_model=AttendanceChartResponse)
 def get_attendance_chart(
@@ -202,47 +229,35 @@ def get_attendance_chart(
 
     appointments = query.all()
 
-    # --- Contadores ---
-    attended = sum(1 for app in appointments if app.attended)
-    cancelled = sum(1 for app in appointments if app.status == AppointmentStatus.CANCELLED)
-    not_attended = sum(
-        1 for app in appointments
-        if not app.attended and app.status != AppointmentStatus.CANCELLED
-    )
+    states = {
+        "SCHEDULED": 0,
+        "CONFIRMED": 0,
+        "COMPLETED": 0,
+        "CANCELLED": 0,
+        "NO_SHOW": 0
+    }
 
-    labels = ["Asistieron", "No asistieron", "Cancelados"]
-    values = [attended, not_attended, cancelled]
-    colors = ["#2ecc71", "#e74c3c", "#f39c12"]
+    for app in appointments:
+        if app.status:
+            states[app.status.value] += 1
 
-    # --- Gráfico de barras ---
+    labels = list(states.keys())
+    values = list(states.values())
+    colors = ["blue", "orange", "green", "red", "gray"]
+
     plt.figure(figsize=(8, 5))
     bars = plt.bar(labels, values, color=colors)
 
-    # Mostrar valores arriba de cada barra
     for bar in bars:
         y = bar.get_height()
-        plt.text(
-            bar.get_x() + bar.get_width() / 2,
-            y + 0.1,
-            f"{int(y)}",
-            ha="center",
-            va="bottom",
-            fontsize=12
-        )
+        plt.text(bar.get_x() + bar.get_width()/2, y + 0.1, f"{y}", ha="center")
 
-    plt.title("Estadísticas de Asistencia de Pacientes")
-    plt.xlabel("Categorías")
-    plt.ylabel("Cantidad de turnos")
-    plt.grid(axis='y', linestyle='--', alpha=0.4)
-
-    # Exportar imagen a base64
+    plt.title("Estados de Turnos")
     buffer = BytesIO()
     plt.savefig(buffer, format="png", bbox_inches="tight")
     buffer.seek(0)
-    img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
+    img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
     plt.close()
 
-    return AttendanceChartResponse(
-        chart_image=f"data:image/png;base64,{img_base64}"
-    )
+    return AttendanceChartResponse(chart_image=f"data:image/png;base64,{img_base64}")

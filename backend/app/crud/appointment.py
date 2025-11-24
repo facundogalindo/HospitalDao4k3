@@ -72,7 +72,7 @@ def update_appointment_status(
 
     if db_appointment:
         # status es el Enum del schema. Guardamos el Enum del modelo.
-        db_appointment.status = ModelAppointmentStatus(status.value)
+        db_appointment.status = status
         db.commit()
         db.refresh(db_appointment)
     return db_appointment

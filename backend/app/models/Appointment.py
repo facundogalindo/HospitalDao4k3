@@ -27,7 +27,7 @@ class Appointment(Base):
     end_at = Column(TIMESTAMP, nullable=False)
 
     status = Column(
-        Enum(AppointmentStatus),
+        Enum(AppointmentStatus, name="appointment_status"),
         default=AppointmentStatus.SCHEDULED,
         nullable=False
     )
@@ -38,7 +38,6 @@ class Appointment(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
-    # Relaciones ORM
     patient = relationship("Patient")
     doctor = relationship("Doctor")
 
