@@ -16,6 +16,12 @@ def create_appointment(db: Session, appointment: AppointmentCreate):
     # ------------------------------------------
     # 1) VALIDACIÓN DE SOLAPAMIENTO
     # ------------------------------------------
+
+    if appointment.start_at >= appointment.end_at :
+        raise ValueError(
+            "La cita debe tener al menos 15 minutos de duración. "
+        )
+                 
     conflict = (
         db.query(Appointment)
         .filter(
@@ -23,6 +29,7 @@ def create_appointment(db: Session, appointment: AppointmentCreate):
             Appointment.status != ModelAppointmentStatus.CANCELLED,
             Appointment.start_at < appointment.end_at,
             appointment.start_at < Appointment.end_at,
+
         )
         .first()
     )
