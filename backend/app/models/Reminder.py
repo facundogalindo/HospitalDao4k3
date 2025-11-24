@@ -9,4 +9,4 @@ class Reminder(Base):
     channel = Column(String(20))  # email, sms, push
     send_at = Column(TIMESTAMP, nullable=False)
     sent = Column(Boolean, default=False)
-    payload = Column(Text)
+    message = Column(Text)

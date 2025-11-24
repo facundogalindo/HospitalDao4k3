@@ -1,8 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+# ---------------- OBSERVERS ----------------
+from app.events.event_manager import event_manager
+from app.events.observers import ReminderCreator, EmailNotifier
+#########
 from datetime import datetime, timedelta
 
-from apscheduler.schedulers.background import BackgroundScheduler
+#from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.database import engine, Base, SessionLocal
@@ -22,8 +26,8 @@ app.add_middleware(
 )
 
 # ---------------- SCHEDULER ----------------
-scheduler = BackgroundScheduler()
-
+#scheduler = BackgroundScheduler()
+"""
 def generate_automatic_reminders():
     from app.models.Appointment import Appointment, AppointmentStatus
     from app.models.Reminder import Reminder
@@ -111,7 +115,8 @@ def send_pending_reminders():
     finally:
         db.close()
 
-"""
+
+
 @app.on_event("startup")
 def start_scheduler():
     scheduler.add_job(
@@ -167,3 +172,6 @@ app.include_router(workinghours_router, prefix="/working-hours", tags=["working-
 @app.get("/")
 def root():
     return {"message": "Sistema de Turnos Médicos API funcionando correctamente"}
+
+event_manager.subscribe("appointment_created", ReminderCreator())
+event_manager.subscribe("appointment_created", EmailNotifier())

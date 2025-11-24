@@ -2,15 +2,20 @@ from sqlalchemy.orm import Session
 
 from app.models.Appointment import Appointment, AppointmentStatus as ModelAppointmentStatus
 from app.schemas.appointment import AppointmentCreate, AppointmentStatus as SchemaAppointmentStatus
+from app.events.event_manager import event_manager
 
-
+from sqlalchemy.orm import joinedload
+from app.events.event_manager import event_manager
+from app.models.Doctor import Doctor
 def create_appointment(db: Session, appointment: AppointmentCreate):
     """
-    Crea un turno nuevo validando que el médico NO tenga solapamientos
-    en el horario indicado (para estados que no sean CANCELLED).
+    Crea un turno nuevo validando solapamiento
+    y luego dispara el patrón OBSERVER.
     """
 
-    # Validar solapamiento de turnos para el mismo médico
+    # ------------------------------------------
+    # 1) VALIDACIÓN DE SOLAPAMIENTO
+    # ------------------------------------------
     conflict = (
         db.query(Appointment)
         .filter(
@@ -23,22 +28,51 @@ def create_appointment(db: Session, appointment: AppointmentCreate):
     )
 
     if conflict:
-        # No levantamos HTTPException acá para mantener el CRUD
-        # independiente de FastAPI. Usamos ValueError y que la API lo
-        # traduzca a un 400.
         raise ValueError(
             "El médico ya tiene un turno en ese horario. "
             "Por favor elegí otro horario."
         )
 
+    # ------------------------------------------
+    # 2) CREAR EL TURNO
+    # ------------------------------------------
     db_appointment = Appointment(**appointment.dict())
     db.add(db_appointment)
     db.commit()
     db.refresh(db_appointment)
 
+    # ------------------------------------------
+    # 3) RECARGAR CON JOINEDLOAD
+    #    (Cargar patient, doctor y especialidades)
+    # ------------------------------------------
+    db_appointment = (
+        db.query(Appointment)
+        .options(
+            joinedload(Appointment.patient),
+            joinedload(Appointment.doctor).joinedload(Doctor.specialties)
+        )
+        .filter(Appointment.id == db_appointment.id)
+        .first()
+    )
 
+    # Verificación de relaciones (debug amigable)
+    print("\n[DEBUG] Turno creado:")
+    print(" - Appointment ID:", db_appointment.id)
+    print(" - Paciente:", db_appointment.patient.first_name, db_appointment.patient.last_name)
+    print(" - Doctor:", db_appointment.doctor.first_name, db_appointment.doctor.last_name)
+    print(
+        " - Especialidades:",
+        [s.name for s in db_appointment.doctor.specialties]
+        if db_appointment.doctor.specialties else "Ninguna"
+    )
+
+    # ------------------------------------------
+    # 4) NOTIFICAR A LOS OBSERVERS
+    # ------------------------------------------
+    event_manager.notify("appointment_created", db_appointment)
 
     return db_appointment
+
 
 
 def get_appointments(db: Session, skip: int = 0, limit: int = 100):
