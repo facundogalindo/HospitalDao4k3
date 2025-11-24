@@ -269,7 +269,7 @@ const Turnos = () => {
                                 <FaTimes />
                             </button>
                         </div>
-
+                        {error && <div className="error-message">{error}</div>}
                         <form className="modal-form" onSubmit={handleSubmit}>
                             <label>
                                 Paciente:

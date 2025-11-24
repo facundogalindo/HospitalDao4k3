@@ -19,7 +19,7 @@ def create_appointment(db: Session, appointment: AppointmentCreate):
 
     if appointment.start_at >= appointment.end_at :
         raise ValueError(
-            "La cita debe tener al menos 15 minutos de duración. "
+            "El tiempo de inicio debe ser menor al de fin de un turno. "
         )
                  
     conflict = (
@@ -29,7 +29,6 @@ def create_appointment(db: Session, appointment: AppointmentCreate):
             Appointment.status != ModelAppointmentStatus.CANCELLED,
             Appointment.start_at < appointment.end_at,
             appointment.start_at < Appointment.end_at,
-
         )
         .first()
     )
