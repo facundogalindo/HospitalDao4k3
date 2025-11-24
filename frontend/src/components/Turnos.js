@@ -102,6 +102,7 @@ const Turnos = () => {
     // Crear turno
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError(null); // limpiamos errores
         try {
             await createAppointment({
                 ...formData,
@@ -112,7 +113,29 @@ const Turnos = () => {
             fetchData();
             closeModal();
         } catch (err) {
-            setError(err.response?.data?.detail || "Error al crear turno.");
+            if (err.response?.status === 400) {
+                const errorData = err.response.data;
+                
+                // Si el backend envía errores detallados por campo
+                if (typeof errorData === 'object' && errorData.details) {
+                    const errorMessages = Object.values(errorData.details).flat();
+                    setError(`Errores de validación: ${errorMessages.join(', ')}`);
+                } 
+                // Si el backend envía un mensaje general
+                else if (errorData.detail) {
+                    setError(errorData.detail);
+                }
+                // Si el backend envía un array de errores
+                else if (Array.isArray(errorData)) {
+                    setError(errorData.map(err => err.msg || err.message).join(', '));
+                }
+                // Mensaje por defecto
+                else {
+                    setError("Datos inválidos. Por favor, verifique la información ingresada.");
+                }
+            } else {
+                setError(err.response?.data?.detail || "Error al crear turno.");
+            }
         }
     };
 
