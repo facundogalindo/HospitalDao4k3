@@ -10,6 +10,8 @@ import {
 import { FaClock, FaPlus, FaEdit, FaTrashAlt, FaSave, FaTimes } from "react-icons/fa";
 import "../styles/Medicos.css";
 
+import BotonVolverFlotante from "./BotonFlotante";
+
 const WEEKDAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
 export default function HorariosTrabajo() {
@@ -184,6 +186,8 @@ export default function HorariosTrabajo() {
             <h1 className="crud-title">
                 <FaClock /> Horarios de Trabajo
             </h1>
+
+            <BotonVolverFlotante />
 
             {error && <div className="error-message">{error}</div>}
 

@@ -10,6 +10,8 @@ import {
 import { FaUserMd, FaPlus, FaEdit, FaTrashAlt, FaSave, FaTimes } from "react-icons/fa";
 import "../styles/Medicos.css";
 
+import BotonVolverFlotante from "./BotonFlotante";
+
 export default function Medicos() {
     const [doctors, setDoctors] = useState([]);
     const [specialties, setSpecialties] = useState([]);
@@ -144,6 +146,8 @@ export default function Medicos() {
             <h1 className="crud-title">
                 <FaUserMd /> Gestión de Médicos
             </h1>
+
+            <BotonVolverFlotante />
 
             <button className="add-button" onClick={openCreate}>
                 <FaPlus /> Agregar Médico

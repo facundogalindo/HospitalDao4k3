@@ -3,11 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { getSpecialties, createSpecialty, updateSpecialty, deleteSpecialty } from '../api/api';
 import { FaEdit, FaTrashAlt, FaPlus, FaTimes, FaSave, FaStethoscope } from 'react-icons/fa';
 import '../styles/Medicos.css'; // Reutilizamos los estilos CRUD
+import BotonVolverFlotante from './BotonFlotante';
 
 const initialFormData = {
     name: '',
     description: '',
 };
+
 
 const Especialidades = () => {
     const [specialties, setSpecialties] = useState([]);
@@ -116,6 +118,8 @@ const Especialidades = () => {
             <h1 className="crud-title">
                 <FaStethoscope /> Gestión de Especialidades
             </h1>
+
+            <BotonVolverFlotante />
 
             {error && <div className="error-message">{error}</div>}
 

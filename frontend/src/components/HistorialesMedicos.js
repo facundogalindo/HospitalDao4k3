@@ -14,6 +14,8 @@ import {
 import { FaPlus, FaEdit, FaTrashAlt, FaSave, FaTimes, FaPills } from 'react-icons/fa';
 import '../styles/Medicos.css'; // estilos base
 
+import BotonVolverFlotante from './BotonFlotante';
+
 export default function HistorialesMedicos() {
 
     // ---------------------------
@@ -205,6 +207,8 @@ export default function HistorialesMedicos() {
 
             {/* TÍTULO */}
             <h1 className="crud-title"><FaPills /> Historial Clínico</h1>
+
+            <BotonVolverFlotante />
 
             {/* SELECTOR PACIENTE */}
             <div className="mb-3">

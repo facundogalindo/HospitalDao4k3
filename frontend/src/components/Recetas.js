@@ -11,6 +11,8 @@ import {
 import { FaPills, FaPlus, FaEdit, FaTrashAlt, FaSave, FaTimes } from "react-icons/fa";
 import "../styles/Medicos.css";
 
+import BotonVolverFlotante from "./BotonFlotante";
+
 export default function Recetas() {
     const [patients, setPatients] = useState([]);
     const [records, setRecords] = useState([]);
@@ -181,9 +183,11 @@ export default function Recetas() {
     if (loading) return <p>Cargando...</p>;
 
     return (
+
+        
         <div className="crud-container">
             <h1 className="crud-title"><FaPills /> Recetas</h1>
-
+            <BotonVolverFlotante />
             {/* SELECT PACIENTE Y HISTORIAL */}
             <div className="row mb-3">
                 

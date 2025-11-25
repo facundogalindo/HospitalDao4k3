@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { getPatients, createPatient, updatePatient, deletePatient } from '../api/api';
 import { FaEdit, FaTrashAlt, FaPlus, FaTimes, FaSave, FaUserInjured } from 'react-icons/fa';
 import '../styles/Medicos.css'; // Reutilizamos los estilos base de gestión de tablas
-
+import BotonVolverFlotante from './BotonFlotante';
 const initialFormData = {
     first_name: '',
     last_name: '',
@@ -120,6 +120,8 @@ const Pacientes = () => {
             <h1 className="crud-title">
                 <FaUserInjured /> Gestión de Pacientes
             </h1>
+
+            <BotonVolverFlotante />
 
             {error && <div className="error-message">{error}</div>}
 

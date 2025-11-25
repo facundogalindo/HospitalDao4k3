@@ -21,6 +21,9 @@ import {
 
 import '../styles/Medicos.css';
 
+import BotonVolverFlotante from './BotonFlotante';
+
+
 // Estados posibles
 const STATUS_MAP = {
     SCHEDULED: "Programado",
@@ -176,6 +179,8 @@ const Turnos = () => {
             <h1 className="crud-title">
                 <FaCalendarCheck /> Gestión de Turnos Médicos
             </h1>
+
+            <BotonVolverFlotante />
 
             {error && <div className="error-message">{error}</div>}
 

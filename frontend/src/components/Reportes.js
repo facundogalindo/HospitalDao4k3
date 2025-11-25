@@ -19,6 +19,8 @@ import {
 
 import "../styles/Medicos.css";
 
+import BotonVolverFlotante from "./BotonFlotante";
+
 export default function Reportes() {
   // -------------------------------------
   // ESTADOS
@@ -193,6 +195,8 @@ export default function Reportes() {
       <h1 className="crud-title">
         <FaChartBar /> Reportes del Sistema
       </h1>
+
+      <BotonVolverFlotante />
 
       {error && <div className="error-message">{error}</div>}
 
