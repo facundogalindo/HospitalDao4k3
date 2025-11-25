@@ -194,7 +194,7 @@ const Turnos = () => {
                             <th>Inicio</th>
                             <th>Duración</th>
                             <th>Estado</th>
-                            <th>Asistió</th>
+                            {/* <th>Asistió</th> */}
                             <th>Eliminar</th>
                         </tr>
                     </thead>
@@ -232,14 +232,14 @@ const Turnos = () => {
                                     </select>
                                 </td>
 
-                                {/* ICONO ASISTIÓ */}
+                                {/* ICONO ASISTIÓ
                                 <td>
                                     {app.attended ? (
                                         <FaCheck style={{ color: "green" }} />
                                     ) : (
                                         <FaTimesCircle style={{ color: "red" }} />
                                     )}
-                                </td>
+                                </td> */}
 
                                 {/* ELIMINAR */}
                                 <td>

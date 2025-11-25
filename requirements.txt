@@ -14,3 +14,4 @@ cors==1.0.1
 apscheduler==3.10.4
 matplotlib==3.6.0
 numpy==1.26.4
+cleanpy==0.5.1
